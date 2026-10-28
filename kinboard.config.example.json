@@ -1,0 +1,52 @@
+{
+  "language": "en",
+  "timezone": "Europe/London",
+  "units": "metric",
+  "location": { "name": "London", "latitude": 51.5072, "longitude": -0.1276 },
+  "weather": { "enabled": true },
+
+  "calendars": [
+    { "label": "ME", "ics": "${CALENDAR_ME}" },
+    { "label": "FAM", "ics": "${CALENDAR_FAMILY}" }
+  ],
+
+  "tasks": { "provider": "todoist", "token": "${TODOIST_TOKEN}", "filter": "today | overdue" },
+
+  "menu": {
+    "labels": ["Lunch", "Dinner"],
+    "startDate": "2026-01-05",
+    "weeks": [
+      {
+        "mon": ["Pasta with beans", "Chicken salad"],
+        "tue": ["Cheese omelette", "Fish"],
+        "wed": ["Beef stew", "Lentil soup"],
+        "thu": ["Fish", "Eggs"],
+        "fri": ["Chickpeas", "Chicken"],
+        "sat": ["Pizza", "Cheese board"],
+        "sun": ["Roast", "Soup"]
+      }
+    ],
+    "overrides": { "2026-12-25": "Christmas lunch at grandma's" }
+  },
+
+  "waste": {
+    "from": 20,
+    "until": 6,
+    "schedule": {
+      "mon": ["Food waste"],
+      "tue": ["Paper"],
+      "wed": ["Food waste"],
+      "thu": ["General waste"],
+      "fri": ["Food waste", "Glass"],
+      "sat": ["Plastic", "Cans"]
+    }
+  },
+
+  "screen": {
+    "sections": ["header", "weather", "waste", "events", "footer"],
+    "maxEvents": 4,
+    "lowBattery": 20
+  },
+  "panel": { "views": ["home", "weather", "agenda", "tasks", "menu"] },
+  "daysAhead": 7
+}

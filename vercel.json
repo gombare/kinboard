@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "node_modules/@fontsource/roboto/files/roboto-latin-{400,700}-normal.woff"
+    }
+  },
+  "headers": [
+    { "source": "/(.*)", "headers": [{ "key": "Referrer-Policy", "value": "no-referrer" }] }
+  ]
+}

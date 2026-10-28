@@ -1,0 +1,8 @@
+node_modules/
+.env
+kinboard.config.json
+.vercel/
+*.log
+preview.png
+.DS_Store
+kindle-ready/

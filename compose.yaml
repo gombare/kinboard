@@ -1,0 +1,11 @@
+services:
+  kinboard:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      KINBOARD_CONFIG_FILE: /config/kinboard.config.json
+    volumes:
+      - ./kinboard.config.json:/config/kinboard.config.json:ro

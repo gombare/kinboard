@@ -1,0 +1,27 @@
+{
+  "name": "kinboard",
+  "version": "0.1.0",
+  "description": "Turn an old Kindle into a fridge dashboard: calendar, weather, tasks, meal plan and bin-day reminders.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "preview": "node scripts/preview.js",
+    "test": "node --test test/*.test.js",
+    "setup": "node scripts/setup.js"
+  },
+  "dependencies": {
+    "@fontsource/roboto": "5.0.8",
+    "@resvg/resvg-js": "2.6.2",
+    "ical.js": "2.2.1",
+    "pngjs": "7.0.0",
+    "satori": "0.63.2"
+  },
+  "overrides": {
+    "fflate": "0.8.3"
+  }
+}
