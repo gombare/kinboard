@@ -37,12 +37,22 @@ bars() {
 }
 
 wifi_up() {
+  # After deep sleep Wi-Fi sometimes does not reconnect by itself: ask powerd for a little
+  # more time before suspending again and restart Wi-Fi if needed.
+  lipc-set-prop -i com.lab126.powerd deferSuspend 90 2>/dev/null
   lipc-set-prop com.lab126.cmd wirelessEnable 1 2>/dev/null
-  i=0
-  while [ $i -lt 30 ]; do
-    [ "$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)" = "CONNECTED" ] && return 0
+  i=0; S=""
+  while [ $i -lt 60 ]; do
+    S=$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)
+    [ "$S" = "CONNECTED" ] && return 0
+    if [ $i -eq 20 ] || [ $i -eq 40 ]; then
+      log "wifi state $S: restarting wifi"
+      lipc-set-prop com.lab126.wifid enable 0 2>/dev/null; sleep 2
+      lipc-set-prop com.lab126.wifid enable 1 2>/dev/null
+    fi
     sleep 1; i=$((i+1))
   done
+  log "wifi not connected (state $S)"
   return 1
 }
 
@@ -82,7 +92,7 @@ set_alarm() {
 
 refresh() {
   if is_night; then log "night: no refresh"; return 1; fi
-  if ! wifi_up; then log "wifi not connected"; return 1; fi
+  if ! wifi_up; then return 1; fi
   B=$(lipc-get-prop com.lab126.powerd battLevel 2>/dev/null); C=$(lipc-get-prop com.lab126.powerd isCharging 2>/dev/null)
   if curl -s -f -m 45 -o $TMP "${SCREEN_URL}&battery=${B:-}&charging=${C:-0}" && [ "$(head -c 4 $TMP | tail -c 3)" = "PNG" ]; then
     mv $TMP $IMG; log "image updated (battery ${B:-?}%)"
