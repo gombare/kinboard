@@ -56,6 +56,10 @@ docker compose up -d --build
 
 Il Kindle deve raggiungere il server: sulla stessa Wi-Fi usa l'indirizzo locale (`http://192.168.1.10:8080`); da fuori casa, per esempio Tailscale o un reverse proxy.
 
+### App di Home Assistant (add-on)
+
+Se a casa hai Home Assistant OS, Kinboard può girare lì dentro e leggere calendari, liste e farmaci senza token a lunga durata. *Impostazioni → App → App store → ⋮ → Repository*, aggiungi `https://github.com/gombare/kinboard`, installa **Kinboard** e segui la scheda *Documentazione* ([homeassistant/kinboard/DOCS.md](homeassistant/kinboard/DOCS.md)).
+
 ## 2. Configura
 
 **Il modo più semplice: `npm run setup`.** Ti fa qualche domanda — la città (trova da solo coordinate e fuso orario), i link dei calendari, il servizio per le cose da fare, il menù, la differenziata, l'indirizzo del server — e crea `kinboard.config.json`, `.env` (i segreti, leggibile solo da te) e una cartella `kindle-ready/` da copiare così com'è sul Kindle. Stampa anche le variabili da incollare su Vercel.

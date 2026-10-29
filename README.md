@@ -60,6 +60,10 @@ docker compose up -d --build
 
 The Kindle must be able to reach the server: on the same Wi-Fi use the server's LAN address (`http://192.168.1.10:8080`); from outside, use something like Tailscale or a reverse proxy.
 
+### Home Assistant app (add-on)
+
+If Home Assistant OS runs at home, Kinboard can run inside it and read calendars, to-do lists and medications without a long-lived token. *Settings → Apps → App store → ⋮ → Repositories*, add `https://github.com/gombare/kinboard`, install **Kinboard** and follow its *Documentation* tab ([homeassistant/kinboard/DOCS.md](homeassistant/kinboard/DOCS.md)).
+
 ### Plain Node.js (20+)
 
 `npm install && KINBOARD_TOKEN=… npm start` (port `PORT`, default 8080).
