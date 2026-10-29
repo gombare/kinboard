@@ -29,6 +29,13 @@
     "overrides": { "2026-12-25": "Christmas lunch at grandma's" }
   },
 
+  "medications": {
+    "items": [
+      { "who": "Anna", "name": "Vitamin D", "times": ["08:00"] },
+      { "who": "Tom", "name": "Antibiotic", "times": ["08:00", "20:00"], "until": "2026-11-05" }
+    ]
+  },
+
   "waste": {
     "from": 20,
     "until": 6,
@@ -43,10 +50,11 @@
   },
 
   "screen": {
-    "sections": ["header", "weather", "waste", "events", "footer"],
+    "sections": ["header", "weather", "waste", "events", "medications", "footer"],
     "maxEvents": 4,
+    "maxDoses": 4,
     "lowBattery": 20
   },
-  "panel": { "views": ["home", "weather", "agenda", "tasks", "menu"] },
+  "panel": { "views": ["home", "weather", "agenda", "tasks", "medications", "menu"] },
   "daysAhead": 7
 }

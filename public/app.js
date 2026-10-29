@@ -109,6 +109,15 @@
       }
       h += '<div class="rule"></div>';
       if (data.waste) h += '<div class="waste"><div class="k">' + esc(data.waste.when === 'tonight' ? S.wasteTonight : S.wasteToday) + '</div><div class="v">' + esc(data.waste.what) + '</div></div>';
+      var meds = data.medications, open = [];
+      if (meds && data.views.indexOf('medications') >= 0) {
+        for (var m = 0; m < meds.doses.length; m++) if (!meds.doses[m].taken) open.push(meds.doses[m]);
+        if (open.length) {
+          var nd = open[0];
+          h += '<div class="dose-next" onclick="kinboard.go(\'medications\')">' + icon('pill', 26) + ' <b>' + esc(nd.time) + '</b> ' + esc((nd.who ? nd.who + ' · ' : '') + nd.name) +
+            (nd.late ? ' <span class="small bold">' + esc(S.late.toUpperCase()) + '</span>' : '') + (open.length > 1 ? ' <span class="small muted">' + esc(S.more.replace('{n}', open.length - 1)) + '</span>' : '') + '</div>';
+        }
+      }
       if (data.views.indexOf('agenda') >= 0) {
         h += '<div class="label">' + esc(S.upcoming) + '</div><div id="home-events"></div>';
       }
@@ -161,6 +170,32 @@
       }
       return h + '</table>';
     },
+    medications: function () {
+      var meds = data.medications;
+      if (!meds) return '<div class="message">' + esc(S.medsError) + '</div>';
+      var h = '<div class="label" style="margin-top:0">' + esc(S.medsToday) + '</div>';
+      if (!meds.doses.length) h += '<div class="message">' + esc(data.medicationsOk ? S.noDoses : S.medsError) + '</div>';
+      else {
+        h += '<table>';
+        for (var i = 0; i < meds.doses.length; i++) {
+          var d = meds.doses[i], key = d.id + ' ' + d.time, busy = pending[key], tick = meds.canTick && d.canTick !== false && !d.taken && !busy;
+          h += '<tr class="dose' + (d.next ? ' next' : '') + (d.taken ? ' taken' : '') + (busy ? ' pending' : '') + '">' +
+            '<td class="check"' + (tick ? ' onclick="kinboard.dose(' + i + ')"' : '') + '><span class="box">' + (d.taken || busy ? icon('check', 34) : '') + '</span></td>' +
+            '<td class="dose-time">' + esc(d.time) + '</td><td>' + esc(d.name) + '<div class="small">' + esc(d.who) +
+            (d.late ? ' · <b>' + esc(S.late) + '</b>' : '') + (d.taken ? ' · ' + esc(S.taken) : '') + (busy ? ' · ' + esc(S.completing) : '') + '</div></td></tr>';
+        }
+        h += '</table>';
+      }
+      if (meds.therapies.length) {
+        h += '<div class="label">' + esc(S.therapies) + '</div><table>';
+        for (var j = 0; j < meds.therapies.length; j++) {
+          var t = meds.therapies[j], end = t.until ? S.until + ' ' + (+t.until.slice(8, 10)) + '/' + t.until.slice(5, 7) : S.noEnd;
+          h += '<tr class="therapy"><td><b>' + esc(t.name) + '</b> · ' + esc(t.who) + '<div class="small">' + esc(t.times.join(' · ') + ' — ' + end) + '</div></td></tr>';
+        }
+        h += '</table>';
+      }
+      return h;
+    },
     menu: function () {
       if (!data.menu) return '<div class="message">' + esc(S.noMenu) + '</div>';
       var h = '<table class="menu">';
@@ -185,6 +220,7 @@
     var nav = '';
     for (var i = 0; i < data.views.length; i++) nav += '<td class="' + (data.views[i] === view ? 'active' : '') + '" onclick="kinboard.go(\'' + data.views[i] + '\')">' + esc(S.nav[data.views[i]]) + '</td>';
     $('nav-row').innerHTML = nav;
+    $('nav').className = data.views.length > 5 ? 'many' : '';
     $('nav').style.display = data.views.length > 1 ? '' : 'none';
     $('content').style.bottom = data.views.length > 1 ? '74px' : '0';
   }
@@ -221,6 +257,16 @@
         else { render(); alertBanner(S.taskError); }
       });
     },
+  };
+  window.kinboard.dose = function (i) {
+    var d = data.medications && data.medications.doses[i]; if (!d) return;
+    var key = d.id + ' ' + d.time; if (pending[key] || d.taken) return;
+    pending[key] = true; render();
+    request('POST', '/api/dose', 'token=' + encodeURIComponent(token) + '&id=' + encodeURIComponent(d.id) + '&time=' + encodeURIComponent(d.time), function (status, json) {
+      delete pending[key];
+      if (status === 200 && json && json.ok) load(true);
+      else { render(); alertBanner(S.doseError); }
+    });
   };
   function alertBanner(text) { var c = $('content'); c.innerHTML = '<div class="banner">' + esc(text) + '</div>' + c.innerHTML; }
 

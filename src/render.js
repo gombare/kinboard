@@ -7,6 +7,7 @@ import { strings } from './i18n.js';
 import { svg } from './icons.js';
 import { KIND_ICON, iconFor, weatherKind } from './sources/weather.js';
 import { addDays, parts } from './time.js';
+import { dosesForScreen } from './sources/medications.js';
 
 const W = 600, H = 800;
 
@@ -24,8 +25,8 @@ function h(type, style, ...children) {
   const kids = children.flat().filter(c => c !== null && c !== undefined && c !== false);
   return { type, props: { style: { display: 'flex', ...style }, children: kids.length === 1 ? kids[0] : kids } };
 }
-function icon(name, size, stroke = 2) {
-  const src = `data:image/svg+xml;base64,${Buffer.from(svg(name, size, stroke)).toString('base64')}`;
+function icon(name, size, stroke = 2, color = '#000') {
+  const src = `data:image/svg+xml;base64,${Buffer.from(svg(name, size, stroke, color)).toString('base64')}`;
   return { type: 'img', props: { src, width: size, height: size, style: { width: size, height: size } } };
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -43,7 +44,13 @@ export function screenTree(data, cfg, { battery, charging } = {}) {
   const p = parts(now, tz), pad = n => String(n).padStart(2, '0');
   const w = data.weather, c = w?.current, d = w?.daily;
   const waste = data.waste;
-  const maxEvents = Math.max(1, (cfg.screen.maxEvents || 4) - (waste ? 1 : 0));
+  const showMeds = !!data.medications && cfg.screen.sections.includes('medications');
+  const doses = showMeds ? dosesForScreen(data.medications.doses, cfg.screen.maxDoses || 4) : [];
+  // Vertical budget (pixels, measured on the 600x800 layout): the agenda gets what is left.
+  const used = 44 + 80 + (c ? 172 : 50) + 42 + ((data.menu || data.tasks) ? 100 : 0) + 28
+    + (waste ? 82 : 0) + (showMeds ? 48 + Math.max(1, doses.length) * 34 : 0);
+  const fit = Math.floor((H - used) / 64);
+  const maxEvents = Math.max(1, Math.min(cfg.screen.maxEvents || 4, fit));
   const events = data.events.slice(0, maxEvents);
   const lowBattery = Number.isFinite(battery) && battery < cfg.screen.lowBattery && !charging;
   const rule = h('div', { height: 3, minHeight: 3, flexShrink: 0, background: '#000', width: '100%' });
@@ -88,9 +95,9 @@ export function screenTree(data, cfg, { battery, charging } = {}) {
   const sections = {
     // The date is the headline: the image stays up for minutes, a big clock would be misleading.
     header: [
-      h('div', { fontSize: 46, fontWeight: 700, lineHeight: 1.1 }, `${t.weekdays[p.weekday]} ${p.day}`),
-      h('div', { justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
-        h('div', { fontSize: 26 }, cap(`${t.months[p.month - 1]} ${p.year}`)),
+      h('div', { fontSize: 40, fontWeight: 700, lineHeight: 1.1 }, `${t.weekdays[p.weekday]} ${p.day}`),
+      h('div', { justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
+        h('div', { fontSize: 23 }, cap(`${t.months[p.month - 1]} ${p.year}`)),
         h('div', { fontSize: 18, color: '#333' }, `${t.updated} ${pad(p.hour)}:${pad(p.minute)}`)),
       rule,
     ],
@@ -105,6 +112,20 @@ export function screenTree(data, cfg, { battery, charging } = {}) {
         h('div', { fontSize: 19, color: '#222' }, `${whenLabel(e, data.today, t)} · ${e.allDay ? t.allDay : `${e.time}–${e.endTime}`}`)))
         : h('div', { fontSize: 24, color: '#333' }, data.calendarsOk ? t.noEvents : t.calendarError),
     ],
+    // Today's doses: the next one is printed white on black, taken ones are ticked.
+    medications: showMeds ? [
+      h('div', { alignItems: 'center', marginTop: 12, marginBottom: 4 },
+        icon('pill', 22), h('div', { fontSize: 20, fontWeight: 700, letterSpacing: 2, marginLeft: 8 }, t.medsToday)),
+      doses.length ? doses.map(d => {
+        const fg = d.next ? '#fff' : '#000';
+        return h('div', { alignItems: 'center', height: 34, padding: '0 6px', margin: '0 -6px', background: d.next ? '#000' : '#fff', color: fg },
+          h('div', { fontSize: 22, fontWeight: 700, width: 70 }, d.time),
+          h('div', { fontSize: 22, flexGrow: 1, color: d.taken ? '#555' : fg }, trim(`${d.who ? `${d.who} · ` : ''}${d.name}`, d.late ? 26 : 34)),
+          d.late ? h('div', { fontSize: 17, fontWeight: 700, marginRight: 8 }, t.late.toUpperCase()) : null,
+          h('div', { width: 24, height: 24, border: `2px solid ${fg}`, alignItems: 'center', justifyContent: 'center' },
+            d.taken ? icon('check', 20, 3, fg) : null));
+      }) : h('div', { fontSize: 22, color: '#333' }, data.medicationsOk ? t.noDoses : t.medsError),
+    ] : null,
     footer: [h('div', { flexGrow: 1 }), footer],
   };
   const order = [...cfg.screen.sections];

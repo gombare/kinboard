@@ -3,7 +3,7 @@
 import { makeEvent } from './ics.js';
 import { dayStart } from '../time.js';
 
-async function ha(cfg, path, { method = 'GET', body } = {}) {
+export async function haApi(cfg, path, { method = 'GET', body } = {}) {
   const { url, token } = cfg.homeassistant || {};
   if (!url || !token) throw new Error('homeassistant: url and token are required');
   const res = await fetch(`${url.replace(/\/$/, '')}${path}`, {
@@ -17,7 +17,7 @@ async function ha(cfg, path, { method = 'GET', body } = {}) {
 
 export async function fetchHaCalendar(cfg, cal, { from, to, tz }) {
   const q = new URLSearchParams({ start: new Date(from).toISOString(), end: new Date(to).toISOString() });
-  const list = await ha(cfg, `/api/calendars/${encodeURIComponent(cal.homeassistant)}?${q}`);
+  const list = await haApi(cfg, `/api/calendars/${encodeURIComponent(cal.homeassistant)}?${q}`);
   return list.map((e, i) => {
     const allDay = !!e.start.date;
     const start = allDay ? dayStart(e.start.date, tz) : Date.parse(e.start.dateTime);
@@ -28,11 +28,11 @@ export async function fetchHaCalendar(cfg, cal, { from, to, tz }) {
 
 export async function fetchHaTodo(cfg) {
   const entity = cfg.tasks.entity;
-  const out = await ha(cfg, '/api/services/todo/get_items?return_response', { method: 'POST', body: { entity_id: entity, status: 'needs_action' } });
+  const out = await haApi(cfg, '/api/services/todo/get_items?return_response', { method: 'POST', body: { entity_id: entity, status: 'needs_action' } });
   const items = out?.service_response?.[entity]?.items || [];
   return items.map(i => ({ id: i.uid, title: i.summary || '', notes: i.description || '', due: (i.due || '').slice(0, 10) }));
 }
 
 export async function completeHaTodo(cfg, id) {
-  await ha(cfg, '/api/services/todo/update_item', { method: 'POST', body: { entity_id: cfg.tasks.entity, item: id, status: 'completed' } });
+  await haApi(cfg, '/api/services/todo/update_item', { method: 'POST', body: { entity_id: cfg.tasks.entity, item: id, status: 'completed' } });
 }

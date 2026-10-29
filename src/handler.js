@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 import { loadConfig } from './config.js';
 import { getData, resetCache } from './data.js';
 import { completeTask } from './sources/tasks.js';
+import { markDose } from './sources/medications.js';
+import { isoDay } from './time.js';
 import { clientStrings } from './i18n.js';
 import { ICONS } from './icons.js';
 import { renderScreen } from './render.js';
@@ -38,6 +40,13 @@ export async function handle({ method = 'GET', path, query, form = {} }) {
     if (path === '/api/task' && method === 'POST') {
       if (!form.id || String(form.id).length > 200) return json(400, { ok: false, error: 'missing task id' });
       if (!cfg.demo) await completeTask(cfg, String(form.id));
+      resetCache();
+      return json(200, { ok: true });
+    }
+    if (path === '/api/dose' && method === 'POST') {
+      const id = String(form.id || ''), time = String(form.time || '');
+      if (!id || id.length > 200 || !/^\d{2}:\d{2}$/.test(time)) return json(400, { ok: false, error: 'missing dose' });
+      if (!cfg.demo) await markDose(cfg, id, time, isoDay(Date.now(), cfg.timezone));
       resetCache();
       return json(200, { ok: true });
     }

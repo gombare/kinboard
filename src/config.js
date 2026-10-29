@@ -12,8 +12,8 @@ import path from 'node:path';
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-const SCREEN_SECTIONS = ['header', 'weather', 'waste', 'events', 'footer'];
-const PANEL_VIEWS = ['home', 'weather', 'agenda', 'tasks', 'menu'];
+const SCREEN_SECTIONS = ['header', 'weather', 'waste', 'events', 'medications', 'footer'];
+const PANEL_VIEWS = ['home', 'weather', 'agenda', 'tasks', 'medications', 'menu'];
 
 const DEFAULTS = {
   language: 'en',
@@ -27,7 +27,8 @@ const DEFAULTS = {
   tasks: null,
   menu: null,
   waste: null,
-  screen: { maxEvents: 4, lowBattery: 20, sections: SCREEN_SECTIONS },
+  medications: null,
+  screen: { maxEvents: 4, maxDoses: 4, lowBattery: 20, sections: SCREEN_SECTIONS },
   panel: { views: PANEL_VIEWS },
   daysAhead: 7,
 };
@@ -95,8 +96,15 @@ export function normalize(raw) {
       schedule: byWeekday(cfg.waste.schedule),
     };
   }
+  // Medications: a Home Assistant to-do list, or a fixed list of items in the config.
+  if (cfg.medications) {
+    const m = cfg.medications;
+    if (Array.isArray(m.items) && m.items.length) cfg.medications = { items: m.items };
+    else if (m.homeassistant && cfg.homeassistant) cfg.medications = { homeassistant: m.homeassistant };
+    else cfg.medications = null;
+  }
   // Views and sections that have nothing to show are dropped.
-  const has = { weather: cfg.weather.enabled, agenda: cfg.demo || cfg.calendars.length > 0 || !!cfg.google?.calendars, tasks: cfg.demo || !!cfg.tasks, menu: !!cfg.menu, waste: !!cfg.waste };
+  const has = { weather: cfg.weather.enabled, agenda: cfg.demo || cfg.calendars.length > 0 || !!cfg.google?.calendars, tasks: cfg.demo || !!cfg.tasks, menu: !!cfg.menu, waste: !!cfg.waste, medications: cfg.demo || !!cfg.medications };
   cfg.panel.views = cfg.panel.views.filter(v => PANEL_VIEWS.includes(v) && has[v] !== false);
   if (!cfg.panel.views.includes('home')) cfg.panel.views.unshift('home');
   cfg.screen.sections = cfg.screen.sections.filter(s => SCREEN_SECTIONS.includes(s) && has[s === 'events' ? 'agenda' : s] !== false);

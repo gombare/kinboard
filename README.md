@@ -1,6 +1,6 @@
 # Kinboard
 
-**Turn an old Kindle into a fridge dashboard.** Calendar, weather, to-do list, weekly meal plan and bin-day reminders — on e-ink, with weeks of battery life.
+**Turn an old Kindle into a fridge dashboard.** Calendar, weather, to-do list, medication, weekly meal plan and bin-day reminders — on e-ink, with weeks of battery life.
 
 [Italiano](README.it.md)
 
@@ -9,7 +9,7 @@
 | ![Screensaver](docs/screen-en.png) | ![Home](docs/panel-home.png) | ![Weather](docs/panel-weather.png) |
 
 - **Locked:** the Kindle's screensaver becomes the dashboard and refreshes itself every 15 minutes (it sleeps at night).
-- **Unlocked:** the browser opens an interactive panel: today, weather, agenda, to-do (tick tasks off from the Kindle) and the week's menu.
+- **Unlocked:** the browser opens an interactive panel: today, weather, agenda, to-do (tick tasks off from the Kindle), today's medication doses and the week's menu.
 - **Everything is optional and configurable:** use only the parts you need, in English or Italian (more languages welcome).
 
 ## How it works
@@ -85,10 +85,11 @@ Configuration is a JSON file (`kinboard.config.json`, or the `KINBOARD_CONFIG` v
 | `homeassistant` | `{ "url": "http://homeassistant.local:8123", "token": "${HOMEASSISTANT_TOKEN}" }` |
 | `tasks` | `{ "provider": "google" }`, `{ "provider": "todoist", "token", "filter": "today \| overdue" }` or `{ "provider": "homeassistant", "entity": "todo.shopping_list" }` |
 | `menu` | `labels` (e.g. `["Lunch","Dinner"]`), `weeks` (one or more weeks that rotate from `startDate`), `overrides` by date |
+| `medications` | `{ "homeassistant": "todo.medications" }` or `{ "items": [{ "who", "name", "times": ["08:00"], "until" }] }` — see [Medications](#medications) |
 | `waste` | `schedule` by weekday; shown from `from` (default 20) until `until` (default 6) — in the evening the next day's collection |
-| `screen.sections` | order and choice of `header`, `weather`, `waste`, `events`, `footer` |
-| `screen.maxEvents`, `screen.lowBattery` | events on the screensaver (default 4), low-battery warning threshold (default 20 %) |
-| `panel.views` | order and choice of `home`, `weather`, `agenda`, `tasks`, `menu` |
+| `screen.sections` | order and choice of `header`, `weather`, `waste`, `events`, `medications`, `footer` |
+| `screen.maxEvents`, `screen.maxDoses`, `screen.lowBattery` | events (default 4, fewer when space runs out) and doses (default 4) on the screensaver, low-battery warning threshold (default 20 %) |
+| `panel.views` | order and choice of `home`, `weather`, `agenda`, `tasks`, `medications`, `menu` |
 | `daysAhead` | how many days of agenda to load (default 7) |
 | `demo` | `true` shows sample data |
 
@@ -124,6 +125,18 @@ Settings → Integrations → Developer → API token, then `"tasks": { "provide
 ### Home Assistant
 
 Profile → Security → *Long-lived access token*. Calendars use `calendar.*` entities, the to-do list a `todo.*` entity (e.g. the shopping list).
+
+### Medications
+
+The screensaver lists today's doses in time order: the next one is printed white on black, taken ones are ticked, missed ones say *late*. In the panel, the *Meds* tab lets you tick a dose off from the Kindle and shows the ongoing therapies.
+
+- **Fixed list:** `"medications": { "items": [{ "who": "Anna", "name": "Vitamin D", "times": ["08:00"], "until": "2026-12-31" }] }` (`until` is optional). Doses cannot be ticked off.
+- **Home Assistant (recommended):** create a to-do list (*Settings → Devices & services → Add integration → Local To-do*), then `"medications": { "homeassistant": "todo.medications" }`. Each open item is a therapy:
+  - **name:** the medication, e.g. `Vitamin D`;
+  - **description:** `Who | 08:00 20:00` — Kinboard appends ` | taken:2026-10-29 08:00` when a dose is ticked off;
+  - **due date:** optional, the last day of the therapy.
+
+  Because the list lives in Home Assistant, automations can use it too: a reminder with a *Taken* button on Telegram, a bot command to add a therapy, and so on. Completed items are ignored. The Italian `prese:` is understood as well.
 
 ## Why the jailbreak (and what works without it)
 

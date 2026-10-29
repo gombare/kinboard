@@ -1,6 +1,6 @@
 # Kinboard
 
-**Trasforma un vecchio Kindle in un pannello da frigorifero.** Calendario, meteo, cose da fare, menù della settimana e promemoria della raccolta differenziata — su e-ink, con settimane di batteria.
+**Trasforma un vecchio Kindle in un pannello da frigorifero.** Calendario, meteo, cose da fare, farmaci, menù della settimana e promemoria della raccolta differenziata — su e-ink, con settimane di batteria.
 
 [English](README.md)
 
@@ -9,7 +9,7 @@
 | ![Salvaschermo](docs/screen-it-evening.png) | ![Home](docs/panel-home.png) | ![Meteo](docs/panel-weather.png) |
 
 - **Bloccato:** il salvaschermo del Kindle diventa il pannello e si aggiorna da solo ogni 15 minuti (di notte riposa).
-- **Sbloccato:** il browser apre il pannello interattivo: oggi, meteo, agenda, da fare (le attività si spuntano dal Kindle) e menù della settimana.
+- **Sbloccato:** il browser apre il pannello interattivo: oggi, meteo, agenda, da fare (le attività si spuntano dal Kindle), farmaci del giorno e menù della settimana.
 - **Tutto è facoltativo e configurabile:** usi solo le parti che ti servono, in italiano o in inglese.
 
 ## Come funziona
@@ -112,6 +112,18 @@ Tieni segreti questi indirizzi (mettili nelle variabili d'ambiente).
 
 - **Todoist:** Impostazioni → Integrazioni → Sviluppatore → token API; `"tasks": { "provider": "todoist", "token": "${TODOIST_TOKEN}" }`.
 - **Home Assistant:** Profilo → Sicurezza → *Token di accesso a lunga durata*; calendari `calendar.*`, lista `todo.*`.
+
+### Farmaci
+
+Il salvaschermo mostra le dosi di oggi in ordine di orario: la prossima in bianco su nero, quelle prese con la spunta, quelle saltate con *in ritardo*. Nel pannello, la scheda *Farmaci* permette di segnare una dose dal Kindle e mostra le terapie in corso.
+
+- **Lista fissa:** `"medications": { "items": [{ "who": "Anna", "name": "Vitamina D", "times": ["08:00"], "until": "2026-12-31" }] }` (`until` è facoltativo). Le dosi non si possono segnare.
+- **Home Assistant (consigliato):** crea una lista (*Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Local To-do*), poi `"medications": { "homeassistant": "todo.farmaci" }`. Ogni voce aperta è una terapia:
+  - **nome:** il farmaco, per esempio `Vitamina D`;
+  - **descrizione:** `Chi | 08:00 20:00` — quando segni una dose Kinboard aggiunge ` | prese:2026-10-29 08:00`;
+  - **scadenza:** facoltativa, l'ultimo giorno della terapia.
+
+  Visto che la lista sta in Home Assistant, la possono usare anche le automazioni: un promemoria su Telegram con il pulsante *Presa*, un comando del bot per aggiungere una terapia e così via. Le voci completate vengono ignorate.
 
 ## A cosa serve il jailbreak (e cosa funziona senza)
 

@@ -4,8 +4,9 @@ import { fetchGoogle } from './sources/google.js';
 import { fetchHaCalendar } from './sources/homeassistant.js';
 import { fetchTasks } from './sources/tasks.js';
 import { fetchWeather } from './sources/weather.js';
+import { dosesFor, fetchMedications } from './sources/medications.js';
 import { demoData } from './demo.js';
-import { addDays, dayStart, isoDay, offsetMs, parts, weekdayOf } from './time.js';
+import { addDays, dayStart, hhmm, isoDay, offsetMs, parts, weekdayOf } from './time.js';
 
 // Menu of a given day: per-date override first, then the rotating weekly plan.
 export function menuFor(menu, date) {
@@ -48,6 +49,7 @@ export async function getData(cfg, now = Date.now(), { fresh = false } = {}) {
     weather: cfg.weather.enabled ? fetchWeather(cfg) : Promise.resolve(null),
     google: cfg.google ? fetchGoogle(cfg, range) : Promise.resolve(null),
     tasks: fetchTasks(cfg),
+    medications: cfg.medications ? fetchMedications(cfg) : Promise.resolve(null),
     ...Object.fromEntries(cfg.calendars.map((c, i) => [`cal${i}`, c.ics ? fetchIcs(c, range) : fetchHaCalendar(cfg, c, range)])),
   };
   const names = Object.keys(jobs), results = await Promise.allSettled(Object.values(jobs));
@@ -73,6 +75,8 @@ export async function getData(cfg, now = Date.now(), { fresh = false } = {}) {
     events,
     calendarsOk: events.length > 0 || !errors.some(e => /calendar|google|homeassistant/.test(e)),
     tasks: cfg.tasks ? (cfg.tasks.provider === 'google' ? got.google?.tasks : got.tasks) ?? null : null,
+    medications: cfg.medications ? got.medications ?? [] : null,
+    medicationsOk: !cfg.medications || !!got.medications,
     errors,
   };
   if (!errors.length) cache = { at: now, key, value };
@@ -93,6 +97,13 @@ function withClock(value, cfg, now) {
     tasksEnabled: !!(cfg.tasks || cfg.demo),
     menu: cfg.menu ? { labels: cfg.menu.labels, today: menuFor(cfg.menu, today), week } : null,
     waste: wasteFor(cfg.waste, now, tz),
+    // Doses depend on the clock (which one is next, which are late), the therapies do not.
+    medications: value.medications ? {
+      doses: dosesFor(value.medications, today, hhmm(now, tz)),
+      therapies: value.medications.filter(m => !m.until || m.until >= today).map(({ id, name, who, times, until }) => ({ id, name, who, times, until })),
+      canTick: !!cfg.medications?.homeassistant || !!cfg.demo,
+    } : null,
+    medicationsOk: value.medicationsOk !== false,
   };
 }
 

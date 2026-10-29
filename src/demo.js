@@ -8,11 +8,13 @@ const SAMPLES = {
     events: [['ME', 'Dentist', 3], ['FAM', "Dinner at grandma's", 9], ['ME', 'Team meeting', 26], ['FAM', 'Football practice', 30], ['ME', 'Haircut', 50], ['FAM', 'School play', 74]],
     birthday: "Anna's birthday",
     tasks: ['Buy milk', 'Call the plumber', 'Return library books'],
+    meds: [['Anna', 'Antibiotic', ['08:00', '20:00'], 3], ['Tom', 'Vitamin D', ['09:00'], 0], ['Anna', 'Ear drops', ['13:00'], 2]],
   },
   it: {
     events: [['M', 'Dentista', 3], ['FAM', 'Cena dai nonni', 9], ['F', 'Riunione', 26], ['M', 'Calcetto', 30], ['FAM', 'Pediatra', 50], ['FAM', 'Recita scolastica', 74]],
     birthday: 'Compleanno Anna',
     tasks: ['Comprare il latte', "Chiamare l'idraulico", 'Riportare i libri in biblioteca'],
+    meds: [['Giulia', 'Antibiotico', ['08:00', '20:00'], 3], ['Marco', 'Vitamina D', ['09:00'], 0], ['Giulia', 'Gocce auricolari', ['13:00'], 2]],
   },
 };
 
@@ -35,6 +37,11 @@ export function demoData(cfg, now) {
     events,
     calendarsOk: true,
     tasks: cfg.tasks || cfg.demo ? s.tasks.map((title, i) => ({ id: `t${i}`, title, due: i === 1 ? today : '' })) : null,
+    // The 08:00 doses are already ticked off, so the preview shows every state.
+    medications: (s.meds || []).map(([who, name, times, days], i) => ({
+      id: `m${i}`, who, name, times, until: days ? addDays(today, days) : '',
+      taken: { date: today, times: times.filter(t => t === '08:00') },
+    })),
     errors: [],
   };
 }
