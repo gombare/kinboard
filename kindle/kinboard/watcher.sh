@@ -37,22 +37,25 @@ bars() {
 }
 
 wifi_up() {
-  # After deep sleep Wi-Fi sometimes does not reconnect by itself: ask powerd for a little
-  # more time before suspending again and restart Wi-Fi if needed.
-  lipc-set-prop -i com.lab126.powerd deferSuspend 90 2>/dev/null
+  # After a timed wake-up powerd may leave the Wi-Fi service stopped (state NA):
+  # start it ourselves, then enable the radio and wait for the connection.
+  lipc-set-prop -i com.lab126.powerd deferSuspend 120 2>/dev/null
+  S=$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)
+  if [ -z "$S" ] || [ "$S" = "NA" ]; then
+    log "wifi state ${S:-empty}, powerd $(lipc-get-prop com.lab126.powerd state 2>/dev/null), service: $(status wifid 2>&1 | head -1)"
+    start wifid >/dev/null 2>&1 || initctl start wifid >/dev/null 2>&1
+    sleep 3
+  fi
   lipc-set-prop com.lab126.cmd wirelessEnable 1 2>/dev/null
-  i=0; S=""
+  lipc-set-prop com.lab126.wifid enable 1 2>/dev/null
+  i=0
   while [ $i -lt 60 ]; do
     S=$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)
-    [ "$S" = "CONNECTED" ] && return 0
-    if [ $i -eq 20 ] || [ $i -eq 40 ]; then
-      log "wifi state $S: restarting wifi"
-      lipc-set-prop com.lab126.wifid enable 0 2>/dev/null; sleep 2
-      lipc-set-prop com.lab126.wifid enable 1 2>/dev/null
-    fi
+    [ "$S" = "CONNECTED" ] && { [ $i -gt 5 ] && log "wifi connected after ${i}s"; return 0; }
+    [ $i -eq 30 ] && lipc-set-prop com.lab126.wifid scan 1 2>/dev/null
     sleep 1; i=$((i+1))
   done
-  log "wifi not connected (state $S)"
+  log "wifi not connected (state $S, service: $(status wifid 2>&1 | head -1))"
   return 1
 }
 
