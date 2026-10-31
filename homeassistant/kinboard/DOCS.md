@@ -23,6 +23,10 @@ Example configuration with Home Assistant sources:
 }
 ```
 
+## Menu in Home Assistant
+
+When a menu is configured, the app publishes it as `sensor.kinboard_menu` (refreshed every 10 minutes): the state is today's meal, the attributes `today`, `tomorrow` and `week` hold each day by course. Use it in automations, dashboards or a chat bot, for example `{{ state_attr('sensor.kinboard_menu', 'tomorrow') }}`.
+
 ## Security
 
 - The token protects every request. Anyone on your network who knows it can read what the panel shows and tick off tasks and doses, nothing else.

@@ -52,3 +52,41 @@ process.env.KINBOARD_TOKEN = token;
 process.env.PORT = process.env.PORT || '8080';
 console.log(`[kinboard] starting${raw.homeassistant ? ' (connected to Home Assistant)' : ''}`);
 await import('../server.js');
+
+// Publishes the menu to Home Assistant as sensor.kinboard_menu, so automations
+// and bots can use it (for example a /menu command). The state is today's meal;
+// the attributes hold today, tomorrow and the whole week. Home Assistant forgets
+// states set this way on restart, so the sensor is refreshed every 10 minutes.
+if (supervisor) {
+  const { loadConfig } = await import('../src/config.js');
+  const { getData } = await import('../src/data.js');
+  const { addDays } = await import('../src/time.js');
+  const cfg = loadConfig();
+  const meal = (labels, m) => !m ? { note: '' } : m.courses
+    ? Object.fromEntries(labels.map((l, i) => [l.toLowerCase(), m.courses[i] || ''])) : { note: m.note || '' };
+  const publish = async () => {
+    try {
+      const d = await getData(cfg);
+      if (!d.menu) return;
+      const { labels, week } = d.menu;
+      const byDate = Object.fromEntries(week.map(w => [w.date, w]));
+      const tomorrow = addDays(d.today, 1);
+      const t = d.menu.today;
+      const state = (t?.courses ? labels.map((l, i) => t.courses[i] && `${l}: ${t.courses[i]}`).filter(Boolean).join(' · ') : t?.note || '') || '—';
+      const attributes = {
+        friendly_name: 'Kinboard menu', icon: 'mdi:silverware-fork-knife', labels,
+        today: { date: d.today, ...meal(labels, t) },
+        tomorrow: { date: tomorrow, ...meal(labels, byDate[tomorrow] || null) },
+        week: week.map(w => ({ date: w.date, ...meal(labels, w) })),
+      };
+      const res = await fetch('http://supervisor/core/api/states/sensor.kinboard_menu', {
+        method: 'POST', signal: AbortSignal.timeout(10000),
+        headers: { authorization: `Bearer ${supervisor}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ state: state.slice(0, 250), attributes }),
+      });
+      if (!res.ok) console.error(`[kinboard] menu sensor: HTTP ${res.status}`);
+    } catch (err) { console.error('[kinboard] menu sensor:', String(err.message || err).slice(0, 200)); }
+  };
+  setTimeout(publish, 5000);
+  setInterval(publish, 10 * 60 * 1000);
+}
