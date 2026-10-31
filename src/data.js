@@ -5,6 +5,7 @@ import { fetchHaCalendar } from './sources/homeassistant.js';
 import { fetchTasks } from './sources/tasks.js';
 import { fetchWeather } from './sources/weather.js';
 import { dosesFor, fetchMedications } from './sources/medications.js';
+import { panelMenuFor } from './sources/googlePanel.js';
 import { demoData } from './demo.js';
 import { addDays, dayStart, hhmm, isoDay, offsetMs, parts, weekdayOf } from './time.js';
 
@@ -76,6 +77,7 @@ export async function getData(cfg, now = Date.now(), { fresh = false } = {}) {
     calendarsOk: events.length > 0 || !errors.some(e => /calendar|google|homeassistant/.test(e)),
     tasks: cfg.tasks ? (cfg.tasks.provider === 'google' ? got.google?.tasks : got.tasks) ?? null : null,
     medications: cfg.medications ? got.medications ?? [] : null,
+    sheetMenu: got.google?.menu || null,
     medicationsOk: !cfg.medications || !!got.medications,
     errors,
   };
@@ -87,7 +89,14 @@ export async function getData(cfg, now = Date.now(), { fresh = false } = {}) {
 function withClock(value, cfg, now) {
   const tz = cfg.timezone, today = isoDay(now, tz);
   const week = [];
-  if (cfg.menu) for (let i = 0; i < 7; i++) { const d = addDays(mondayOf(today), i); week.push({ date: d, ...(menuFor(cfg.menu, d) || {}) }); }
+  // The menu comes from the config or, with the first panel's Apps Script, from its Google Sheet.
+  const sheet = !cfg.menu && value.sheetMenu;
+  const labels = cfg.menu ? cfg.menu.labels : (cfg.google?.menuLabels || (cfg.language === 'it' ? ['Pranzo', 'Cena'] : ['Lunch', 'Dinner']));
+  const dayMenu = d => {
+    const m = cfg.menu ? menuFor(cfg.menu, d) : panelMenuFor(sheet, d);
+    return m?.courses ? { ...m, courses: m.courses.slice(0, labels.length) } : m;
+  };
+  if (cfg.menu || sheet) for (let i = 0; i < 7; i++) { const d = addDays(mondayOf(today), i); week.push({ date: d, ...(dayMenu(d) || {}) }); }
   return {
     ...value,
     events: value.events.filter(e => e.end > now),
@@ -95,7 +104,7 @@ function withClock(value, cfg, now) {
     location: { name: cfg.location.name },
     views: cfg.panel.views,
     tasksEnabled: !!(cfg.tasks || cfg.demo),
-    menu: cfg.menu ? { labels: cfg.menu.labels, today: menuFor(cfg.menu, today), week } : null,
+    menu: (cfg.menu || sheet) ? { labels, today: dayMenu(today), week } : null,
     waste: wasteFor(cfg.waste, now, tz),
     // Doses depend on the clock (which one is next, which are late), the therapies do not.
     medications: value.medications ? {

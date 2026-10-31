@@ -122,6 +122,8 @@ iCal is read-only and has no Google Tasks. For that, [`apps-script/Code.gs`](app
 
 After editing the script: *Manage deployments → edit → New version* (the URL stays the same).
 
+**Coming from the first Kindle panel?** Its Apps Script ("Pannello Kindle", with the menu in a Google Sheet) works as it is: add `"api": "panel"` to the `google` block. Kinboard then also reads the 4-week menu, its per-day changes and the cycle restarts from the Sheet; `menuLabels` sets the course names (default lunch and dinner).
+
 ### Todoist
 
 Settings → Integrations → Developer → API token, then `"tasks": { "provider": "todoist", "token": "${TODOIST_TOKEN}", "filter": "today | overdue" }`. Any [Todoist filter](https://todoist.com/help/articles/introduction-to-filters) works.

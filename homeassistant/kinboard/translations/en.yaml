@@ -2,6 +2,9 @@ configuration:
   token:
     name: Token
     description: The secret the Kindle sends with every request (KINBOARD_TOKEN). At least 16 characters, for example the output of "openssl rand -hex 16".
+  google_key:
+    name: Google key
+    description: Optional. The key of your Google Apps Script; it is added to the "google" block of the configuration, so the configuration holds no secrets.
   config:
     name: Configuration
     description: The Kinboard configuration as JSON (calendars, to-do list, medications, menu…). Leave empty to use kinboard.config.json in the app's config folder.

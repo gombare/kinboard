@@ -104,7 +104,9 @@ export function normalize(raw) {
     else cfg.medications = null;
   }
   // Views and sections that have nothing to show are dropped.
-  const has = { weather: cfg.weather.enabled, agenda: cfg.demo || cfg.calendars.length > 0 || !!cfg.google?.calendars, tasks: cfg.demo || !!cfg.tasks, menu: !!cfg.menu, waste: !!cfg.waste, medications: cfg.demo || !!cfg.medications };
+  // The first panel's Apps Script also serves a menu from a Google Sheet.
+  const sheetMenu = cfg.google?.api === 'panel' && cfg.google.menu !== false;
+  const has = { weather: cfg.weather.enabled, agenda: cfg.demo || cfg.calendars.length > 0 || !!cfg.google?.calendars, tasks: cfg.demo || !!cfg.tasks, menu: !!cfg.menu || sheetMenu, waste: !!cfg.waste, medications: cfg.demo || !!cfg.medications };
   cfg.panel.views = cfg.panel.views.filter(v => PANEL_VIEWS.includes(v) && has[v] !== false);
   if (!cfg.panel.views.includes('home')) cfg.panel.views.unshift('home');
   cfg.screen.sections = cfg.screen.sections.filter(s => SCREEN_SECTIONS.includes(s) && has[s === 'events' ? 'agenda' : s] !== false);

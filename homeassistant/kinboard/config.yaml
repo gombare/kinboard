@@ -1,5 +1,5 @@
 name: Kinboard
-version: "0.2.0"
+version: "0.3.0"
 slug: kinboard
 description: Turn an old Kindle into a fridge dashboard with calendars, to-do lists and medications from Home Assistant.
 url: https://github.com/gombare/kinboard/tree/main/homeassistant/kinboard
@@ -21,7 +21,9 @@ map:
   - type: app_config
 options:
   token: ""
+  google_key: ""
   config: ""
 schema:
   token: password
+  google_key: password?
   config: str?

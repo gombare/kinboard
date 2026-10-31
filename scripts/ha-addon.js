@@ -3,6 +3,7 @@
 //
 // Options (/data/options.json):
 //   token   the KINBOARD_TOKEN the Kindle sends (at least 16 characters)
+//   google_key  optional: the key of the Google Apps Script, kept out of the configuration
 //   config  optional: the Kinboard configuration as JSON. When empty,
 //           /config/kinboard.config.json (the app's own config folder) is used.
 //
@@ -35,6 +36,10 @@ try {
   fail(`the configuration is not valid JSON (${String(err.message).replace(/".*$/, '').slice(0, 120)}).`);
 }
 if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('the configuration must be a JSON object.');
+
+// Secrets live in their own password fields, so the configuration itself can be shared or copied safely.
+const googleKey = String(options.google_key || '').trim();
+if (googleKey && raw.google) raw.google.key = googleKey;
 
 // Home Assistant through the Supervisor proxy, unless the configuration names another instance.
 const supervisor = process.env.SUPERVISOR_TOKEN;

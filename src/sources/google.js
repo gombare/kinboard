@@ -3,6 +3,7 @@
 // Tasks list, protected by a shared key. Nothing else ever talks to Google.
 import { makeEvent } from './ics.js';
 import { dayStart } from '../time.js';
+import { completeGooglePanelTask, fetchGooglePanel } from './googlePanel.js';
 
 async function call(google, params, method = 'GET') {
   const q = new URLSearchParams({ key: google.key || '', ...params });
@@ -18,6 +19,7 @@ async function call(google, params, method = 'GET') {
 }
 
 export async function fetchGoogle(cfg, { from, to }) {
+  if (cfg.google.api === 'panel') return fetchGooglePanel(cfg);
   const data = await call(cfg.google, { action: 'read', from: String(from), to: String(to) });
   const tz = cfg.timezone;
   const events = (data.events || []).map(e => {
@@ -31,5 +33,6 @@ export async function fetchGoogle(cfg, { from, to }) {
 
 export async function completeGoogleTask(cfg, taskId) {
   if (!cfg.google) throw new Error('Google is not configured');
+  if (cfg.google.api === 'panel') return completeGooglePanelTask(cfg, taskId);
   await call(cfg.google, { action: 'complete', task: taskId }, 'POST');
 }
