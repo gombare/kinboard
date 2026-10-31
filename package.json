@@ -1,6 +1,6 @@
 {
   "name": "kinboard",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Turn an old Kindle into a fridge dashboard: calendar, weather, tasks, meal plan and bin-day reminders.",
   "license": "MIT",
   "private": true,

@@ -61,6 +61,8 @@ if (supervisor) {
   const { loadConfig } = await import('../src/config.js');
   const { getData } = await import('../src/data.js');
   const { addDays } = await import('../src/time.js');
+  const { menuFor } = await import('../src/data.js');
+  const { panelMenuFor } = await import('../src/sources/googlePanel.js');
   const cfg = loadConfig();
   const meal = (labels, m) => !m ? { note: '' } : m.courses
     ? Object.fromEntries(labels.map((l, i) => [l.toLowerCase(), m.courses[i] || ''])) : { note: m.note || '' };
@@ -76,7 +78,8 @@ if (supervisor) {
       const attributes = {
         friendly_name: 'Kinboard menu', icon: 'mdi:silverware-fork-knife', labels,
         today: { date: d.today, ...meal(labels, t) },
-        tomorrow: { date: tomorrow, ...meal(labels, byDate[tomorrow] || null) },
+        // On Sundays tomorrow is already in next week, outside d.menu.week.
+        tomorrow: { date: tomorrow, ...meal(labels, byDate[tomorrow] || (cfg.menu ? menuFor(cfg.menu, tomorrow) : panelMenuFor(d.sheetMenu, tomorrow))) },
         week: week.map(w => ({ date: w.date, ...meal(labels, w) })),
       };
       const res = await fetch('http://supervisor/core/api/states/sensor.kinboard_menu', {
