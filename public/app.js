@@ -70,9 +70,9 @@
   }
   function addDays(iso, n) { var p = iso.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10); }
 
-  function icon(name, size) {
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (data.ui.icons[name] || '') + '</svg>';
-    return '<img width="' + size + '" height="' + size + '" style="vertical-align:middle" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '">';
+  function icon(name, size, color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + (color || '#000') + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (data.ui.icons[name] || '') + '</svg>';
+    return '<img width="' + size + '" height="' + size + '" class="ic" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '">';
   }
   var KIND = { 0: 'clear', 1: 'mainly_clear', 2: 'partly_cloudy', 3: 'overcast', 45: 'fog', 48: 'fog' };
   function kind(code) {
@@ -95,40 +95,65 @@
       '<div class="w">' + esc((noDay ? '' : dayLabel(e.date) + ' · ') + (e.allDay ? S.allDay : e.time + '–' + e.endTime)) + (e.location ? ' · ' + esc(e.location) : '') + '</div></div>';
   }
 
+  // Home rows grouped by day: a small day heading, then start time and title.
+  // Compact rows (one line, smaller type) are used for later days when the full ones do not all fit.
+  var homeDay = '';
+  function homeEventHtml(e, compact) {
+    var day = e.date < data.today ? data.today : e.date, h = '';
+    if (day !== homeDay) { h += '<tr class="hday"><td colspan="2">' + esc(dayLabel(day).toUpperCase()) + '</td></tr>'; homeDay = day; }
+    var cal = e.calendar ? '<span class="cal">' + esc(e.calendar) + '</span> ' : '';
+    if (compact) return h + '<tr class="c"><td class="when">' + (e.allDay ? '' : esc(e.time)) + '</td><td><div class="t">' + cal + esc(e.title) + '</div></td></tr>';
+    return h + '<tr><td class="when">' + (e.allDay ? '' : esc(e.time)) + '</td>' +
+      '<td><div class="t">' + cal + esc(e.title) + '</div>' +
+      (e.allDay || e.location ? '<div class="small muted">' + esc(e.allDay ? S.allDay : e.location) + '</div>' : '') + '</td></tr>';
+  }
+
   // ---- views ----
   var VIEWS = {
     home: function () {
       var w = data.weather, p = local(nowMs()), h = '';
-      h += '<div class="clock" id="clock">' + pad(p.h) + ':' + pad(p.min) + '</div>';
-      h += '<div class="date">' + esc(S.weekdays[p.wd] + ' ' + p.d + ' ' + S.months[p.m]) + '</div>';
+      // Header: time and date on the left, weather on the right.
+      h += '<table class="head"><tr><td><div class="clock" id="clock">' + pad(p.h) + ':' + pad(p.min) + '</div>' +
+        '<div class="date">' + esc(S.weekdays[p.wd] + ' ' + p.d + ' ' + S.months[p.m]) + '</div></td>';
       if (w) {
         var c = w.current, d0 = w.daily[0];
-        h += '<div class="rule"></div><table><tr><td style="width:96px">' + wxIcon(c.code, 84, !c.isDay) + '</td><td class="wx-temp">' + deg(c.temp) + '</td>' +
-          '<td class="right"><div class="wx-desc">' + esc(S.weather[kind(c.code)]) + '</div><div>' + esc(S.min + ' ' + deg(d0.min) + ' · ' + S.max + ' ' + deg(d0.max)) + '</div>' +
-          '<div class="small">' + icon('droplet', 20) + ' ' + (d0.rain === null ? '--' : d0.rain) + '% &nbsp; ' + icon('wind', 20) + ' ' + Math.round(c.wind) + ' ' + esc(w.units.wind) + '</div></td></tr></table>';
+        h += '<td class="right" onclick="kinboard.go(\'weather\')"><table class="hwx"><tr><td>' + wxIcon(c.code, 56, !c.isDay) + '</td><td class="wx-temp">' + deg(c.temp) + '</td></tr></table>' +
+          '<div class="wx-desc">' + esc(S.weather[kind(c.code)]) + '</div>' +
+          '<div class="small">' + deg(d0.min) + ' / ' + deg(d0.max) + ' &nbsp;' + icon('droplet', 17) + ' ' + (d0.rain === null ? '--' : d0.rain) + '%</div></td>';
       }
-      h += '<div class="rule"></div>';
-      if (data.waste) h += '<div class="waste"><div class="k">' + esc(data.waste.when === 'tonight' ? S.wasteTonight : S.wasteToday) + '</div><div class="v">' + esc(data.waste.what) + '</div></div>';
-      var meds = data.medications, open = [];
+      h += '</tr></table><div class="rule"></div>';
+      // Reminders: one line each, same icon size as the section labels.
+      if (data.waste) h += '<div class="alert inv">' + icon('trash', 24, '#fff') + ' ' + esc(data.waste.when === 'tonight' ? S.wasteTonight : S.wasteToday) + ' · <b>' + esc(data.waste.what) + '</b></div>';
+      var meds = data.medications, open = [], show = [], upcoming = false;
       if (meds && data.views.indexOf('medications') >= 0) {
         for (var m = 0; m < meds.doses.length; m++) if (!meds.doses[m].taken) open.push(meds.doses[m]);
-        if (open.length) {
-          var nd = open[0];
-          h += '<div class="dose-next" onclick="kinboard.go(\'medications\')">' + icon('pill', 26) + ' <b>' + esc(nd.time) + '</b> ' + esc((nd.who ? nd.who + ' · ' : '') + nd.name) +
-            (nd.late ? ' <span class="small bold">' + esc(S.late.toUpperCase()) + '</span>' : '') + (open.length > 1 ? ' <span class="small muted">' + esc(S.more.replace('{n}', open.length - 1)) + '</span>' : '') + '</div>';
+        // Every late dose first (they are the urgent ones), then the next one due; at most three rows.
+        for (var n = 0; n < open.length && show.length < 3; n++) {
+          if (open[n].late) show.push(open[n]);
+          else if (!upcoming) { show.push(open[n]); upcoming = true; }
+        }
+        if (show.length) {
+          h += '<table class="alert doses" onclick="kinboard.go(\'medications\')">';
+          for (var k = 0; k < show.length; k++) {
+            var nd = show[k], rest = k === show.length - 1 ? open.length - show.length : 0;
+            h += '<tr><td class="di">' + icon('pill', 24) + '</td><td><b>' + esc(nd.time) + '</b> ' + esc((nd.who ? nd.who + ' · ' : '') + nd.name) +
+              (nd.late ? ' <span class="tag">' + esc(S.late.toUpperCase()) + '</span>' : '') + (rest > 0 ? ' <span class="small muted">' + esc(S.more.replace('{n}', rest)) + '</span>' : '') + '</td></tr>';
+          }
+          h += '</table>';
         }
       }
       if (data.views.indexOf('agenda') >= 0) {
-        h += '<div class="label">' + esc(S.upcoming) + '</div><div id="home-events"></div>';
+        h += '<div class="label" onclick="kinboard.go(\'agenda\')">' + icon('calendar', 20) + ' ' + esc(S.upcoming) + '</div><div id="home-events"></div>';
       }
+      if (data.tasksEnabled && data.tasks && data.tasks.length) h += '<div id="home-tasks"></div>';
       var menu = data.menu && data.menu.today, foot = '';
       if (data.menu) {
-        foot += '<td><div class="label" style="margin-top:0">' + esc(S.menuToday) + '</div>';
-        if (menu && menu.courses) for (var i = 0; i < menu.courses.length; i++) { if (menu.courses[i]) foot += '<div>' + esc((data.menu.labels[i] ? data.menu.labels[i] + ': ' : '') + menu.courses[i]) + '</div>'; }
+        foot += '<td onclick="kinboard.go(\'menu\')"><div class="label">' + icon('utensils', 20) + ' ' + esc(S.menuToday) + '</div>';
+        if (menu && menu.courses) for (var i = 0; i < menu.courses.length; i++) { if (menu.courses[i]) foot += '<div class="course">' + (data.menu.labels[i] ? '<span class="muted">' + esc(data.menu.labels[i]) + '</span> ' : '') + '<b>' + esc(menu.courses[i]) + '</b></div>'; }
         else foot += '<div>' + esc(menu && menu.note || S.noMenu) + '</div>';
         foot += '</td>';
       }
-      if (data.tasksEnabled && data.tasks) foot += '<td class="right" style="width:34%" onclick="kinboard.go(\'tasks\')"><div class="label" style="margin-top:0">' + esc(S.todo) + '</div><div class="count">' + data.tasks.length + '</div><div class="small">' + esc(plural(S.tasks, data.tasks.length)) + '</div></td>';
+      if (data.tasksEnabled && data.tasks) foot += '<td class="right todo" onclick="kinboard.go(\'tasks\')"><div class="label">' + icon('list-checks', 20) + ' ' + esc(S.todo) + '</div><div class="count">' + data.tasks.length + '</div><div class="small">' + esc(plural(S.tasks, data.tasks.length)) + '</div></td>';
       if (foot) h += '<div id="home-foot"><div class="rule"></div><table class="foot"><tr>' + foot + '</tr></table></div>';
       return h;
     },
@@ -216,7 +241,7 @@
     var h = '';
     if (data.offline) h += '<div class="banner">' + esc(S.offline) + '</div>';
     $('content').innerHTML = h + VIEWS[view]();
-    if (view === 'home') fitHomeEvents();
+    if (view === 'home') fitHome();
     var nav = '';
     for (var i = 0; i < data.views.length; i++) nav += '<td class="' + (data.views[i] === view ? 'active' : '') + '" onclick="kinboard.go(\'' + data.views[i] + '\')">' + esc(S.nav[data.views[i]]) + '</td>';
     $('nav-row').innerHTML = nav;
@@ -225,18 +250,55 @@
     $('content').style.bottom = data.views.length > 1 ? '74px' : '0';
   }
 
-  // Adds events one at a time while they still fit above the footer.
-  function fitHomeEvents() {
-    var box = $('home-events'); if (!box) return;
-    var content = $('content'), foot = $('home-foot'), shown = 0, html = '';
-    for (var i = 0; i < data.events.length && i < 6; i++) {
-      var next = html + eventHtml(data.events[i]);
-      box.innerHTML = next;
-      var bottom = box.offsetTop + box.offsetHeight + (foot ? foot.offsetHeight : 0);
-      if (bottom > content.clientHeight - 8 && shown > 0) break;
-      html = next; shown++;
+  // Fills the home screen to its height: as many events as fit (compacting later days if that shows more),
+  // then, in whatever space is left, the first tasks instead of just their count.
+  var HOME_MAX_EVENTS = 8;
+  function fitHome() {
+    var box = $('home-events'), tbox = $('home-tasks'), content = $('content'), foot = $('home-foot');
+    function fits() {
+      var last = tbox && tbox.innerHTML ? tbox : box || foot;
+      return !last || last.offsetTop + last.offsetHeight + (foot ? foot.offsetHeight : 0) <= content.clientHeight - 8;
     }
-    box.innerHTML = html || '<div class="muted">' + esc(data.calendarsOk ? S.noEvents : S.calendarError) + '</div>';
+    function table(rows) { return '<table class="hev">' + rows + '</table>'; }
+    function fill(compact) {
+      var html = '', shown = 0, day = '';
+      for (var i = 0; i < data.events.length && i < HOME_MAX_EVENTS; i++) {
+        var e = data.events[i];
+        homeDay = day;
+        var next = html + homeEventHtml(e, compact && e.date > data.today);
+        box.innerHTML = table(next);
+        if (!fits() && shown > 0) break;
+        html = next; day = homeDay; shown++;
+      }
+      return { html: html, shown: shown };
+    }
+    if (box) {
+      var want = Math.min(data.events.length, HOME_MAX_EVENTS), best = fill(false);
+      if (best.shown < want) { var tight = fill(true); if (tight.shown > best.shown) best = tight; }
+      box.innerHTML = best.shown ? table(best.html) : '<div class="muted">' + esc(data.calendarsOk ? S.noEvents : S.calendarError) + '</div>';
+    }
+    if (tbox) {
+      var head = '<div class="label" onclick="kinboard.go(\'tasks\')">' + icon('list-checks', 20) + ' ' + esc(S.todo) + '</div>', rows = '', count = 0;
+      for (var j = 0; j < data.tasks.length; j++) {
+        var row = '<tr><td><span class="mini"></span> ' + esc(data.tasks[j].title) + '</td></tr>';
+        tbox.innerHTML = head + '<table class="htask" onclick="kinboard.go(\'tasks\')">' + rows + row + '</table>';
+        if (!fits()) break;
+        rows += row; count++;
+      }
+      if (count && count < data.tasks.length) {
+        // Make room for the "+N more" line if needed.
+        while (count) {
+          tbox.innerHTML = head + '<table class="htask" onclick="kinboard.go(\'tasks\')">' + rows + '<tr><td class="small muted">' + esc(S.more.replace('{n}', data.tasks.length - count)) + '</td></tr></table>';
+          if (fits()) break;
+          rows = rows.slice(0, rows.lastIndexOf('<tr>')); count--;
+        }
+      }
+      if (count) {
+        var col = foot && foot.getElementsByClassName ? foot.getElementsByClassName('todo')[0] : null;
+        if (col) col.parentNode.removeChild(col); // the list replaces the counter
+        if (foot && !foot.getElementsByTagName('td').length) { foot.parentNode.removeChild(foot); foot = null; }
+      } else tbox.innerHTML = '';
+    }
     if (foot) { foot.style.position = 'absolute'; foot.style.left = '18px'; foot.style.right = '18px'; foot.style.bottom = '6px'; }
   }
 
